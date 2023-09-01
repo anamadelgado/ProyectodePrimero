@@ -12,15 +12,15 @@ import modelo.Equipo;
 import modelo.Jugador;
 
 public class EquipoService {
-	public List<Equipo> consultarEquipos() throws EquipoServiceException, SQLException {
+	public List<Equipo> consultarEquipos() throws SQLException {
 		Connection conn = null;
 		ResultSet re = null;
 		PreparedStatement stmt = null;
+		List<Equipo> lista = new ArrayList<>();
 		try {
-			ProveedorConexiones proveedorConexiones = new ProveedorConexiones();
-			List<Equipo> listaEquipos = new ArrayList<>();
-			conn = proveedorConexiones.obtenerConexion();
-			String sql = "SELECT*FROM EQUIPO";
+			ProveedorConexiones c = new ProveedorConexiones();
+			conn = c.obtenerConexion();
+			String sql = "select*from equipo";
 			stmt = conn.prepareStatement(sql);
 			re = stmt.executeQuery();
 			while (re.next()) {
@@ -29,34 +29,30 @@ public class EquipoService {
 				String nombre = re.getString("nombre");
 				equipo.setCodigo(codigo);
 				equipo.setNombre(nombre);
-				listaEquipos.add(equipo);
+				lista.add(equipo);
 
 			}
-			if (listaEquipos.isEmpty()) {
-				throw new EquipoServiceException("No hay equipos");
-			}
-			return listaEquipos;
-
+			return lista;
 		} finally {
 			if (conn != null) {
 				conn.close();
 			}
 			if (stmt != null) {
-				stmt.close();
+				conn.close();
 			}
 		}
 
 	}
 
-	public List<Jugador> consultarJugadoresEquipo(String codigo) throws SQLException, NotFoundException {
+	public List<Jugador> consultarJugadoresEquipo(String codigo) throws SQLException {
 		Connection conn = null;
 		ResultSet re = null;
 		PreparedStatement stmt = null;
+		List<Jugador> lista = new ArrayList<>();
 		try {
-			ProveedorConexiones proveedorConexiones = new ProveedorConexiones();
-			List<Jugador> listaJugadores = new ArrayList<>();
-			conn = proveedorConexiones.obtenerConexion();
-			String sql = "SELECT*FROM JUGADOR WHERE CODIGO_EQUIPO=?";
+			ProveedorConexiones c = new ProveedorConexiones();
+			conn = c.obtenerConexion();
+			String sql = "select*from jugador where codigo_equipo=?";
 			stmt = conn.prepareStatement(sql);
 			stmt.setString(1, codigo);
 			re = stmt.executeQuery();
@@ -66,22 +62,18 @@ public class EquipoService {
 				String codigoEquipo = re.getString("codigo_equipo");
 				String nombre = re.getString("nombre");
 				jugador.setFechaNacimiento(re.getDate("nacimiento").toLocalDate());
-				jugador.setNumero(numero);
-				jugador.setCodigoEquipo(codigoEquipo);
 				jugador.setNombre(nombre);
-				listaJugadores.add(jugador);
+				jugador.setCodigoEquipo(codigoEquipo);
+				jugador.setNumero(numero);
+				lista.add(jugador);
 			}
-			if (listaJugadores.isEmpty()) {
-				throw new NotFoundException("No hay jugadores");
-			}
-			return listaJugadores;
-
+			return lista;
 		} finally {
 			if (conn != null) {
 				conn.close();
 			}
 			if (stmt != null) {
-				stmt.close();
+				conn.close();
 			}
 		}
 
@@ -89,14 +81,13 @@ public class EquipoService {
 
 	public Equipo consultarEquipoCompleto(String codigoEquipo)
 			throws SQLException, NotFoundException, EquipoServiceException {
-
 		Connection conn = null;
 		ResultSet re = null;
 		PreparedStatement stmt = null;
 		try {
-			ProveedorConexiones proveedorConexiones = new ProveedorConexiones();
-			conn = proveedorConexiones.obtenerConexion();
-			String sql = "SELECT*FROM EQUIPO WHERE CODIGO=?";
+			ProveedorConexiones c = new ProveedorConexiones();
+			conn = c.obtenerConexion();
+			String sql = "select*from equipo where codigo=?";
 			stmt = conn.prepareStatement(sql);
 			stmt.setString(1, codigoEquipo);
 			re = stmt.executeQuery();
@@ -108,149 +99,198 @@ public class EquipoService {
 				equipo.setNombre(nombre);
 				equipo.setListaJugadores(consultarJugadoresEquipo(codigoEquipo));
 				return equipo;
-				
 			} else {
-				throw new NotFoundException("No existe el quipo con ese codigo");
+				throw new NotFoundException("No se ha encontrado eqquipo");
 			}
-
-		} finally {
-			if (conn != null) {
-				conn.close();
-			}
-			if (stmt != null) {
-				stmt.close();
-			}
-
-		}
-	}
-
-	private void insertarJugador(Jugador jugador, Connection conn) throws SQLException {
-		PreparedStatement stmt = null;
-		
-		try {
-			String sql = "INSERT INTO JUGADOR VALUES(?,?,?,?)";
-			stmt = conn.prepareStatement(sql);
-			stmt.setInt(1,jugador.getNumero());
-			stmt.setString(2, jugador.getCodigoEquipo());
-			stmt.setString(3, jugador.getNombre());
-			stmt.setDate(4, Date.valueOf(jugador.fechaNacimiento));
-			if(stmt.executeUpdate() !=0) {
-				System.out.println("Jugador guardado!!!");
-			}
-
-		} finally {
-			if (stmt != null) {
-				stmt.close();
-			}
-		}
-
-	}
-
-	public void insertarJugador(Jugador jugador) throws SQLException, EquipoServiceException {
-		Connection conn = null;
-		try {
-			conn = new ProveedorConexiones().obtenerConexion();
-		
-			insertarJugador(jugador, conn);
-		}  finally {
-			if (conn != null) {
-				conn.close();
-			}
-		}
-	}
-
-	private void crearEquipo(Equipo equipo, Connection conn) throws SQLException, EquipoServiceException, NotFoundException {
-		PreparedStatement stmt = null;
-		try {
-			String sql = "INSERT INTO EQUIPO VALUES (?,?)";
-			stmt = conn.prepareStatement(sql);
-			stmt.setString(1, equipo.getCodigo());
-			stmt.setString(2, equipo.getNombre());
-			stmt.execute();
-			
-			for (Jugador jugador : equipo.getListaJugadores()) {
-				jugador.setCodigoEquipo(equipo.getCodigo());
-				jugador.setNumero(jugador.getNumero());
-				añadirJugadorAEquipo(equipo, jugador);
-				
-			}
-
-		} finally {
-			if (stmt != null) {
-				stmt.close();
-			}
-		}
-
-	}
-
-	public void crearEquipo(Equipo equipo) throws SQLException, EquipoServiceException, NotFoundException {
-		Connection conn = null;
-		try {
-			conn = new ProveedorConexiones().obtenerConexion();
-			conn.setAutoCommit(false);
-			crearEquipo(equipo, conn);
-			
-			conn.commit();
-
-		}catch (SQLException e) {
-			conn.rollback();
-			throw e;
-		} finally {
-			if (conn != null) {
-				conn.close();
-			}
-		}
-
-	}
-
-	public void borrarEquipoCompleto(String codigo) throws SQLException, NotFoundException, EquipoServiceException {
-		Connection conn = null;
-		PreparedStatement stmt1 = null;
-		PreparedStatement stmt2 = null;
-		try {
-			ProveedorConexiones c = new ProveedorConexiones();
-			conn = c.obtenerConexion();
-			conn.setAutoCommit(false);
-			String sql1 = "DELETE FROM JUGADOR WHERE CODIGO_EQUIPO=?";
-			stmt1 = conn.prepareStatement(sql1);
-			stmt1.setString(1, codigo);
-			stmt1.executeUpdate();
-			String sql2 = "DELETE FROM EQUIPO WHERE CODIGO=?";
-			stmt2 = conn.prepareStatement(sql2);
-			stmt2.setString(1, codigo);
-			stmt2.executeUpdate();
-			conn.commit();
-			if (stmt2.executeUpdate() == 0) {
-				conn.rollback();
-				throw new NotFoundException("No hay equipos con ese codigo");
-			}else {
-				System.out.println("Equipo eliminado!!");
-			}
-			
 
 		} catch (Exception e) {
-			conn.rollback();
+			throw new EquipoServiceException("No se ha encontrado eqquipo");
 		}
 
 		finally {
 			if (conn != null) {
 				conn.close();
 			}
+			if (stmt != null) {
+				conn.close();
+			}
+		}
+	}
+
+	public void insertarJugador(Jugador jugador) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = new ProveedorConexiones().obtenerConexion();
+			conn.setAutoCommit(false);
+			insertarJugador(conn, jugador);
+			conn.commit();
+		} catch (SQLException e) {
+			conn.rollback();
+		} finally {
+			if (conn != null) {
+				conn.close();
+			}
+		}
+
+	}
+
+	private void insertarJugador(Connection conn, Jugador jugador) throws SQLException {
+		PreparedStatement stmt = null;
+		try {
+			String sql = "insert into jugador values (?,?, ?,?)";
+			stmt = conn.prepareStatement(sql);
+			stmt.setInt(1, jugador.getNumero());
+			stmt.setString(2, jugador.getCodigoEquipo());
+			stmt.setString(3, jugador.getNombre());
+			stmt.setDate(4, Date.valueOf(jugador.getFechaNacimiento()));
+			stmt.execute();
+
+		} finally {
+			if (stmt != null) {
+				stmt.close();
+			}
+		}
+
+	}
+
+	public void crearEquipo(Equipo equipo) throws SQLException, EquipoServiceException {
+		try {
+			List<Jugador> jugadores = equipo.getListaJugadores();
+			for (Jugador jugador : jugadores) {
+				jugador.setCodigoEquipo(equipo.getCodigo());
+				jugador.getNumero();
+				insertarJugador(jugador);
+			}
+			insertarEquipo(equipo);
+		} catch (Exception e) {
+			throw new EquipoServiceException();
+		}
+
+	}
+
+	private void insertarEquipo(Connection conn, Equipo equipo) throws SQLException {
+		PreparedStatement stmt = null;
+		try {
+			String sql = "insert into equipo values (?,?)";
+			stmt = conn.prepareStatement(sql);
+			stmt.setString(1, equipo.getCodigo());
+			stmt.setString(2, equipo.getNombre());
+			stmt.execute();
+		} finally {
+			if (stmt != null) {
+				stmt.close();
+			}
+		}
+
+	}
+
+	public void insertarEquipo(Equipo equipo) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = new ProveedorConexiones().obtenerConexion();
+			conn.setAutoCommit(false);
+			insertarEquipo(conn, equipo);
+			conn.commit();
+		} catch (SQLException e) {
+			conn.rollback();
+		} finally {
+			if (conn != null) {
+				conn.close();
+			}
+		}
+
+	}
+	
+	
+	public void borrarEquipoCompleto(String codigo) throws SQLException, NotFoundException, EquipoServiceException {
+			try {
+		borrarJugadores(codigo);
+			borrarEquipo(codigo);
+			} catch (Exception e) {
+				throw new EquipoServiceException("Ha ocurrido un error");
+			}
+			
+			
+	}
+	
+	private void borrarJugadores(String codigo, Connection conn) throws SQLException{
+		
+		PreparedStatement stmt= null;
+		try {
+		String sql="delete from jugador where codigo_equipo =?";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, codigo);
+		stmt.execute();
+		}finally {
+			if(stmt !=null) {
+				stmt.close();
+			}
 		}
 	}
 	
-	public void añadirJugadorAEquipo(Equipo equipo, Jugador jugador) throws EquipoServiceException, NotFoundException {
+	public void borrarJugadores(String codigo) throws SQLException {
+		Connection conn = null;
 		try {
-			jugador.setCodigoEquipo(equipo.getCodigo());
-			List<Jugador> cantidad= consultarJugadoresEquipo(equipo.getCodigo());
-			jugador.setNumero(cantidad.size()+1);
-			insertarJugador(jugador);
+			conn = new ProveedorConexiones().obtenerConexion();
+			conn.setAutoCommit(false);
+			borrarJugadores(codigo,conn);
+			conn.commit();
 		} catch (SQLException e) {
-		throw new EquipoServiceException(e);
-			
+			conn.rollback();
+		} finally {
+			if (conn != null) {
+				conn.close();
+			}
+		}
+	}
+	
+	
+	
+	
+	private void borrarEquipo(String codigo, Connection conn) throws SQLException, NotFoundException {
+		PreparedStatement stmt= null;
+		try {
+		String sql="delete from equipo where codigo=?";
+		stmt=conn.prepareStatement(sql);
+		stmt.setString(1, codigo);
+		if(stmt.executeUpdate() ==0) {
+			throw new NotFoundException("No existe equipo con este codigo");
+		}
+		}finally {
+			if(stmt != null) {
+				stmt.close();
+			}
 		}
 		
 	}
+	public void borrarEquipo(String codigo) throws SQLException, NotFoundException {
+		Connection conn = null;
+		try {
+			conn = new ProveedorConexiones().obtenerConexion();
+			conn.setAutoCommit(false);
+			borrarEquipo(codigo,conn);
+			conn.commit();
+		} catch (SQLException e) {
+			conn.rollback();
+		} finally {
+			if (conn != null) {
+				conn.close();
+			}
+		}
+
+	}
+	
+	public void añadirJugadorAEquipo(Equipo equipo, Jugador jugador) throws SQLException, EquipoServiceException {
+		try {
+		jugador.setCodigoEquipo(equipo.getCodigo());
+		jugador.setNumero(consultarJugadoresEquipo(equipo.getCodigo()).size()+1);	
+		insertarJugador(jugador);
+		}catch (Exception e) {
+			throw new EquipoServiceException();
+		}
+	}
+
 	
 	
+
 }

@@ -16,7 +16,7 @@ import services.NotFoundException;
 
 public class App {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		Integer opcion = 0;
 		Scanner sc = new Scanner(System.in);
 
@@ -40,6 +40,9 @@ public class App {
 			} while (opcion != 0);
 		} catch (InputMismatchException e) {
 			System.out.println("Lo siento usted ha añadido una letra");
+		} catch (EquipoServiceException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
 	}
@@ -103,7 +106,7 @@ public class App {
 		}
 	}
 
-	private static void crearNuevoEquipo(Scanner sc) {
+	private static void crearNuevoEquipo(Scanner sc) throws SQLException {
 		Equipo equipo = new Equipo();
 		Jugador jugador = new Jugador();
 		EquipoService equipoService = new EquipoService();
@@ -115,11 +118,7 @@ public class App {
 		equipo.setNombre(sc.nextLine());
 		try {
 			equipo.validar();
-			try {
-				equipoService.crearEquipo(equipo);
-			} catch (NotFoundException e) {
-				e.printStackTrace();
-			}
+			equipoService.crearEquipo(equipo);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} catch (EquipoServiceException e) {
@@ -131,11 +130,7 @@ public class App {
 				respuesta = pedirDatosJugador(sc, equipo, jugador, jugadores);
 				try {
 					jugador.validar();
-					try {
-						equipoService.añadirJugadorAEquipo(equipo, jugador);
-					} catch (NotFoundException e) {
-						e.printStackTrace();
-					}
+					equipoService.añadirJugadorAEquipo(equipo, jugador);
 				} catch (EquipoServiceException e) {
 					e.printStackTrace();
 				}
@@ -148,13 +143,11 @@ public class App {
 		} while (!respuesta.equalsIgnoreCase("N"));
 	}
 
-	private static void verEquiposRegistrados() {
+	private static void verEquiposRegistrados() throws EquipoServiceException {
 		EquipoService equipoService = new EquipoService();
 		try {
 			System.out.println(equipoService.consultarEquipos());
 
-		} catch (EquipoServiceException e) {
-			e.printStackTrace();
 		} catch (SQLException e) {
 			System.err.println("Error");
 			e.printStackTrace();
